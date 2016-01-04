@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:tx="http://www.springframework.org/schema/tx" xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+    http://www.springframework.org/schema/tx     
+    http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+    http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context.xsd"
+	   default-autowire="byName" default-lazy-init="true">
+
+	<context:property-placeholder location="classpath:config.properties" ignore-unresolvable="true"/>
+
+	<!-- 扫描除Controller和Component以外的bean注解 -->
+	<context:component-scan base-package="com.allere.update.dao"/>
+	<context:component-scan base-package="com.allere.update.service"/>
+
+
+	<!-- 配置data source数据源 使用连接池-->
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+		  destroy-method="close">
+		<!-- 设置JDBC驱动名称 -->
+		<property name="driverClass" value="${jdbc.driver}" />
+		<!-- 设置JDBC连接URL -->
+		<property name="jdbcUrl" value="${jdbc.url}" />
+		<!-- 设置数据库用户名 -->
+		<property name="user" value="${jdbc.username}" />
+		<!-- 设置数据库密码 -->
+		<property name="password" value="${jdbc.password}" />
+		<!-- 设置连接池初始值 -->
+		<property name="initialPoolSize" value="5" />
+		<!--连接池中保留的最大连接数。默认值: 15 -->
+		<property name="maxPoolSize" value="200"/>
+		<!-- 连接池中保留的最小连接数，默认为：3-->
+		<property name="minPoolSize" value="5"/>
+		<!--最大空闲时间，60秒内未使用则连接被丢弃。若为0则永不丢弃。默认值: 0 -->
+		<property name="maxIdleTime" value="60"/>
+		<!-- 当连接池连接耗尽时，客户端调用getConnection()后等待获取新连接的时间，超时后将抛出SQLException，如设为0则无限期等待。单位毫秒。默认: 0 -->
+		<property name="checkoutTimeout" value="3000"/>
+		<!--当连接池中的连接耗尽的时候c3p0一次同时获取的连接数。默认值: 3 -->
+		<property name="acquireIncrement" value="5"/>
+		<!--定义在从数据库获取新连接失败后重复尝试的次数。默认值: 30 ；小于等于0表示无限次-->
+		<property name="acquireRetryAttempts" value="0"/>
+		<!--重新尝试的时间间隔，默认为：1000毫秒-->
+		<property name="acquireRetryDelay" value="1000" />
+		<!--关闭连接时，是否提交未提交的事务，默认为false，即关闭连接，回滚未提交的事务 -->
+		<property name="autoCommitOnClose" value="false"/>
+		<!--c3p0将建一张名为Test的空表，并使用其自带的查询语句进行测试。如果定义了这个参数那么属性preferredTestQuery将被忽略。你不能在这张Test表上进行任何操作，它将只供c3p0测试使用。默认值: null -->
+		<property name="automaticTestTable" value="Test"/>
+		<!--如果为false，则获取连接失败将会引起所有等待连接池来获取连接的线程抛出异常，但是数据源仍有效保留，并在下次调用getConnection()的时候继续尝试获取连接。如果设为true，那么在尝试获取连接失败后该数据源将申明已断开并永久关闭。默认: false-->
+		<property name="breakAfterAcquireFailure" value="false"/>
+		<!--每60秒检查所有连接池中的空闲连接。默认值: 0，不检查 -->
+		<property name="idleConnectionTestPeriod" value="60"/>
+		<!--c3p0全局的PreparedStatements缓存的大小。如果maxStatements与maxStatementsPerConnection均为0，则缓存不生效，只要有一个不为0，则语句的缓存就能生效。如果默认值: 0-->
+		<property name="maxStatements" value="0"/>
+		<!--maxStatementsPerConnection定义了连接池内单个连接所拥有的最大缓存statements数。默认值: 0 -->
+		<property name="maxStatementsPerConnection" value="50"/>
+
+	</bean>
+
+
+	<!-- 配置Session工厂 -->
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+
+		<property name="namingStrategy">
+			<bean class="org.hibernate.cfg.ImprovedNamingStrategy" />
+		</property>
+		
+		<!-- the must have. before this is mapping,now is entity --> 
+		<property name="annotatedClasses">
+			<list>
+				<!-- 在此处进行实体配置 -->
+				<value>com.plum.update.entity.UpdateIntroEntity</value>
+			</list>
+		</property>
+
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.cache.provider_class">org.hibernate.cache.EhCacheProvider</prop>
+				<prop key="hibernate.cache.use_query_cache">false</prop>
+				<prop key="hibernate.jdbc.batch_size">50</prop>
+				<prop key="hibernate.cache.use_second_level_cache">false</prop>
+			</props>
+		</property>
+
+        <!-- 数据实体扫描路径 -->
+		<property name="packagesToScan" value="com.allere.update.entity" />
+	</bean>
+
+	<!-- 配置交互事务 -->
+	<!--<tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true"/>-->
+
+	<bean id="transactionManager"
+		class="org.springframework.orm.hibernate4.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+
+	<tx:advice id="txAdviceService" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="create*" read-only="false"/>
+			<tx:method name="mod*" read-only="false"/>
+			<tx:method name="update*" read-only="false"/>
+			<tx:method name="del*" read-only="false"/>
+			<tx:method name="save*" read-only="false"/>
+			<tx:method name="deliver*" read-only="false"/>
+			<tx:method name="grade*" read-only="false"/>
+			<tx:method name="get*" read-only="false"/>
+			<tx:method name="*" read-only="true"/>
+		</tx:attributes>
+	</tx:advice>
+	<aop:config>
+		<aop:pointcut id="serviceMethods" expression="execution(* com.allere.update.service.*.*(..))"/>
+		<aop:advisor advice-ref="txAdviceService" pointcut-ref="serviceMethods"/>
+	</aop:config>
+
+</beans>  
